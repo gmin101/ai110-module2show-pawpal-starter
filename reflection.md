@@ -7,6 +7,8 @@
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
 
+For my initial UML design, I was thinking of creating a task class and having walks, feeding, meds, enrichment, grooming, etc. as child classes. For example, the tasks class will include the time, date, and/or description of the task. These classes will include methods that allow the task to be added/edited/deleted. Additionally, I thought about creating a daily plan class which would include variables of time availablility, priority, and owner preferences. In terms of methods, I would have this class allow tasks to be scheduled for a certain day and time as well as removing/deleting a previously added task event.
+
 **b. Design changes**
 
 - Did your design change during implementation?

@@ -23,16 +23,6 @@ def main() -> None:
     owner.add_pet(bella)
 
     # --- Tasks (different times of day) --------------------------------
-    bella.add_task(
-        Task(
-            id="t1",
-            description="morning meds",
-            time=time(7, 30),
-            frequency="daily",
-            duration_minutes=5,
-            priority=5,
-        )
-    )
     rex.add_task(
         Task(
             id="t2",
@@ -43,6 +33,17 @@ def main() -> None:
             priority=3,
         )
     )
+    bella.add_task(
+        Task(
+            id="t4",
+            description="grooming",
+            time=time(11, 0),
+            frequency="weekly",
+            duration_minutes=40,
+            priority=2,
+        )
+    )
+    
     rex.add_task(
         Task(
             id="t3",
@@ -55,12 +56,12 @@ def main() -> None:
     )
     bella.add_task(
         Task(
-            id="t4",
-            description="grooming",
-            time=time(11, 0),
-            frequency="weekly",
-            duration_minutes=40,
-            priority=2,
+            id="t1",
+            description="morning meds",
+            time=time(7, 30),
+            frequency="daily",
+            duration_minutes=5,
+            priority=5,
         )
     )
 

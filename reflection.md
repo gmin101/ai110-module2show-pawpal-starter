@@ -25,10 +25,14 @@ My design didn't change too drastically, but my ai coding assistant recommended 
 - What constraints does your scheduler consider (for example: time, priority, preferences)?
 - How did you decide which constraints mattered most?
 
+Some constraints that my scheduler considered was time and priority. I decided that the constraint that mattered most was the priority of the task, because if a task is urgent/has high priority, it should be done/completed regardless of when it happens.
+
 **b. Tradeoffs**
 
 - Describe one tradeoff your scheduler makes.
 - Why is that tradeoff reasonable for this scenario?
+
+One tradeoff that my scheduler makes is that it is not optimal because it uses a greedy strategy/algorithm. This means that while this algorithm is not the best, it is still able to perform its job because the scale of the list of tasks is tiny. 
 
 ---
 

@@ -6,8 +6,8 @@ across ALL of an owner's pets and builds a prioritized plan.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, fields
-from datetime import time
+from dataclasses import dataclass, field, fields, replace
+from datetime import date, datetime, time, timedelta
 
 
 @dataclass
@@ -22,13 +22,82 @@ class Task:
     # Fields the Scheduler needs to rank and fit tasks:
     duration_minutes: int = 0
     priority: int = 0
+    # Calendar day this task is due. Left as None for tasks that only carry
+    # a time-of-day; next_occurrence() then counts forward from today.
+    due_date: date | None = None
     # Back-reference to the owning pet so tasks stay identifiable
     # after the Scheduler flattens them across pets.
     pet_name: str = ""
 
+    # How far ahead each recurring frequency lands. A frequency absent from
+    # this table (e.g. "once") is treated as non-repeating. Not annotated, so
+    # the dataclass leaves it a plain class attribute rather than a field.
+    _INTERVALS = {"daily": timedelta(days=1), "weekly": timedelta(days=7)}
+
     def mark_complete(self) -> None:
         """Mark this activity as done."""
         self.completed = True
+
+    def end_time(self) -> time:
+        """Clock time this task finishes: start time plus its duration.
+
+        A task is assumed to stay within one day; a duration that would spill
+        past midnight is clamped to 23:59 so same-day overlap checks stay
+        well-behaved.
+
+        Returns:
+            The finish time of day (start time + duration_minutes).
+        """
+        finish = datetime.combine(date.min, self.time) + timedelta(
+            minutes=self.duration_minutes
+        )
+        if finish.date() != date.min:
+            return time(23, 59)
+        return finish.time()
+
+    def overlaps(self, other: Task) -> bool:
+        """Report whether this task's time window collides with another's.
+
+        Args:
+            other: The task to compare this one against.
+
+        Returns:
+            True if the two share a start instant or their [start, end)
+            windows overlap; False otherwise. A zero-duration task only
+            conflicts with something starting at the exact same time.
+        """
+        if self.time == other.time:
+            return True
+        return self.time < other.end_time() and other.time < self.end_time()
+
+    def next_occurrence(self, after: date | None = None) -> Task | None:
+        """Build the next instance of a recurring task.
+
+        The follow-up is a fresh, uncompleted copy with its due_date advanced
+        by one interval (daily -> +1 day, weekly -> +7 days) via timedelta, so
+        month/year rollovers are handled automatically. It also gets a new id
+        (the original id plus the new date) so it can live alongside the
+        completed original without colliding.
+
+        Args:
+            after: Date to count forward from. Defaults to this task's own
+                due_date, or today if that is also unset.
+
+        Returns:
+            The next Task instance, or None if the frequency does not repeat.
+        """
+        interval = self._INTERVALS.get(self.frequency.lower())
+        if interval is None:
+            return None
+        base = after or self.due_date or date.today()
+        next_date = base + interval
+        base_id = self.id.split("#")[0]
+        return replace(
+            self,
+            id=f"{base_id}#{next_date.isoformat()}",
+            completed=False,
+            due_date=next_date,
+        )
 
     def edit(self, **changes) -> None:
         """Update one or more fields in place.
@@ -64,6 +133,26 @@ class Pet:
             raise ValueError(f"duplicate task id {task.id!r} for {self.name}")
         task.pet_name = self.name
         self.tasks.append(task)
+
+    def complete_task(self, task_id: str) -> Task | None:
+        """Mark a task done and, if it recurs, queue its next occurrence.
+
+        Args:
+            task_id: Id of the task to complete.
+
+        Returns:
+            The newly created follow-up task (already attached to this pet),
+            or None if the task does not repeat.
+
+        Raises:
+            KeyError: If no task on this pet has the given id.
+        """
+        task = self._find_task(task_id)
+        task.mark_complete()
+        follow_up = task.next_occurrence()
+        if follow_up is not None:
+            self.add_task(follow_up)
+        return follow_up
 
     def edit_task(self, task_id: str, **changes) -> None:
         """Edit an existing task by id."""
@@ -146,6 +235,111 @@ class Scheduler:
     def pending_tasks(self) -> list[Task]:
         """Tasks that still need doing (not yet completed)."""
         return [t for t in self.collect_tasks() if not t.completed]
+
+    def filter_tasks(
+        self,
+        *,
+        pet_name: str | None = None,
+        completed: bool | None = None,
+    ) -> list[Task]:
+        """Return tasks across all pets, narrowed by pet name and/or status.
+
+        Both filters are keyword-only and optional; leaving one as None means
+        "don't filter on it". Passing neither returns every task.
+
+        Args:
+            pet_name: If given, keep only tasks belonging to this pet.
+            completed: If given, keep only tasks with this completion status
+                (False for still-to-do, True for done).
+
+        Returns:
+            The matching tasks, in collection order.
+
+        Examples:
+            filter_tasks(pet_name="Rex")                    # just Rex's tasks
+            filter_tasks(completed=False)                   # still to do
+            filter_tasks(pet_name="Rex", completed=False)   # both at once
+        """
+        tasks = self.collect_tasks()
+        if pet_name is not None:
+            tasks = [t for t in tasks if t.pet_name == pet_name]
+        if completed is not None:
+            tasks = [t for t in tasks if t.completed == completed]
+        return tasks
+
+    @staticmethod
+    def sort_by_time(tasks: list[Task]) -> list[Task]:
+        """Return the tasks ordered by time of day, earliest first.
+
+        Task.time is a datetime.time, which is directly comparable, so the
+        sort key hands each task's time straight to sorted().
+
+        Args:
+            tasks: The tasks to order.
+
+        Returns:
+            A new sorted list; the input list is left untouched.
+        """
+        return sorted(tasks, key=lambda t: t.time)
+
+    def find_conflicts(
+        self, tasks: list[Task] | None = None
+    ) -> list[tuple[Task, Task]]:
+        """Find pairs of tasks whose time windows collide, across all pets.
+
+        Two tasks conflict when their times overlap (see Task.overlaps) -- the
+        owner can't be in two places at once, whether the clash is within one
+        pet's tasks or between different pets'. The tasks are sorted by start
+        time first, so once a later task begins after the current one ends, no
+        remaining task can overlap it and the inner scan stops early.
+
+        Args:
+            tasks: Tasks to check. Defaults to the owner's pending tasks; pass
+                an explicit list to check a subset (e.g. a generated plan).
+
+        Returns:
+            A list of (earlier, later) task pairs, ordered by start time.
+        """
+        if tasks is None:
+            tasks = self.pending_tasks()
+        ordered = self.sort_by_time(tasks)
+
+        conflicts: list[tuple[Task, Task]] = []
+        for i, first in enumerate(ordered):
+            for second in ordered[i + 1:]:
+                if second.time > first.end_time():
+                    break  # sorted by start: nothing later can overlap `first`
+                if first.overlaps(second):
+                    conflicts.append((first, second))
+        return conflicts
+
+    def conflict_warnings(self, tasks: list[Task] | None = None) -> list[str]:
+        """Return human-readable warnings for time clashes without raising.
+
+        A no-crash companion to find_conflicts: instead of raising when tasks
+        collide, it returns one warning string per conflicting pair, so
+        callers can print the result directly. Even the underlying scan is
+        guarded, so malformed task data degrades to a single warning rather
+        than taking the app down.
+
+        Args:
+            tasks: Tasks to check. Defaults to the owner's pending tasks.
+
+        Returns:
+            A list of warning strings, empty when the schedule is clear.
+        """
+        try:
+            conflicts = self.find_conflicts(tasks)
+        except Exception as err:  # never let a schedule check crash the caller
+            return [f"Warning: could not check for conflicts ({err})"]
+
+        return [
+            f"Warning: {first.description} ({first.pet_name}, "
+            f"{first.time:%H:%M}-{first.end_time():%H:%M}) overlaps "
+            f"{second.description} ({second.pet_name}, "
+            f"{second.time:%H:%M}-{second.end_time():%H:%M})"
+            for first, second in conflicts
+        ]
 
     def score_task(self, task: Task) -> float:
         """Rank a task: higher priority wins, preference matches add a bonus."""

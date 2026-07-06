@@ -79,10 +79,10 @@ Sample test output:
 
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Task sorting | Scheduler.sort_by_time() | e.g., by priority, duration |
+| Filtering | Scheduler.filter_tasks() | e.g., skip tasks if time runs out |
+| Conflict handling | Scheduler.find_conflicts() | e.g., overlapping time slots |
+| Recurring tasks | Task.next_occurrence() | e.g., daily vs. weekly |
 
 ## 📸 Demo Walkthrough
 

@@ -29,51 +29,30 @@ classDiagram
 
     class Task {
         +str id
-        +str name
         +str description
-        +date due_date
-        +time due_time
+        +time time
+        +str frequency
+        +bool completed
         +int duration_minutes
         +int priority
-        +bool completed
+        +str pet_name
         +mark_complete() None
         +edit(changes) None
     }
 
-    class Walk {
-        +str location
-    }
-    class Feeding {
-        +str food_type
-        +float portion
-    }
-    class Medication {
-        +str medication_name
-        +str dosage
-    }
-    class Enrichment {
-        +str activity_type
-    }
-    class Grooming {
-        +str groom_type
-    }
-
     class Scheduler {
         +Owner owner
+        +list~Task~ skipped
+        +dict~str,float~ scores
         +collect_tasks() list~Task~
         +pending_tasks() list~Task~
-        +score_task(task, preferences) float
-        +generate_plan(available_minutes, preferences) list~Task~
+        +score_task(task) float
+        +generate_plan() list~Task~
         +explain(plan) str
     }
 
     Owner "1" --> "*" Pet : owns
     Pet "1" --> "*" Task : has
     Scheduler "1" --> "*" Pet : manages tasks
-    Task <|-- Walk
-    Task <|-- Feeding
-    Task <|-- Medication
-    Task <|-- Enrichment
-    Task <|-- Grooming
     Owner --> Scheduler : reads
     Scheduler ..> Task : orders & selects

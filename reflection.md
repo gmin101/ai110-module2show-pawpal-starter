@@ -14,6 +14,8 @@ For my initial UML design, I was thinking of creating a task class and having wa
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
 
+My design didn't change too drastically, but my ai coding assistant recommended that I included logic that made sure the scheduler is able to retrieve the proper information/tasks from the owner's pets. For example, methods such as collect_tasks() were included. 
+
 ---
 
 ## 2. Scheduling Logic and Tradeoffs

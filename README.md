@@ -70,8 +70,12 @@ pytest --cov
 Sample test output:
 
 ```
-# Paste your pytest output here
+tests\test_pawpal.py .....                                                            [100%]
+
+==================================== 5 passed in 0.55s =====================================
 ```
+
+Based on my test results, I have a confidence level of 5 stars in the system's reliability.
 
 ## 📐 Smarter Scheduling
 

@@ -77,6 +77,19 @@ tests\test_pawpal.py .....                                                      
 
 Based on my test results, I have a confidence level of 5 stars in the system's reliability.
 
+## Features
+
+The scheduling logic in `pawpal_system.py` implements the following algorithms:
+
+- **Sorting by time** — orders tasks chronologically by time of day (`Scheduler.sort_by_time`).
+- **Priority + preference scoring** — ranks each task by its priority, with a bonus when its description matches one of the owner's care preferences (`Scheduler.score_task`).
+- **Greedy time-budget planning** — packs the highest-scoring tasks into the owner's available minutes, recording anything that doesn't fit as "skipped" (`Scheduler.generate_plan`).
+- **Overlap detection** — computes each task's end time and checks half-open `[start, end)` windows so back-to-back tasks don't count as clashing (`Task.end_time`, `Task.overlaps`).
+- **Conflict warnings** — finds every pair of overlapping tasks across all pets and returns human-readable warnings without crashing on bad data (`Scheduler.find_conflicts`, `Scheduler.conflict_warnings`).
+- **Filtering** — narrows tasks by pet and/or completion status (`Scheduler.filter_tasks`).
+- **Daily & weekly recurrence** — completing a recurring task automatically queues its next occurrence one interval ahead, handling month/year rollovers (`Task.next_occurrence`, `Pet.complete_task`).
+- **Plan explanation** — produces a readable justification of what was scheduled, when, and why, plus what was skipped (`Scheduler.explain`).
+
 ## 📐 Smarter Scheduling
 
 > Fill in once you've implemented scheduling logic.
@@ -90,12 +103,11 @@ Based on my test results, I have a confidence level of 5 stars in the system's r
 
 ## 📸 Demo Walkthrough
 
-Describe your app in numbered steps so a reader can follow along without watching a video:
+1. Set the owner to Jordan and the pet to Mochi (a dog).
+2. Add a task: Morning meds, 5 min, high priority, 07:30, daily.
+3. Add a task: Morning walk, 30 min, medium priority, 08:00, daily.
+4. Add a task: Grooming, 40 min, low priority, 11:00, weekly.
+5. Set available minutes to 90 and preferences to `walk, meds`.
+6. Click Generate schedule and read today's plan.
 
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
-
-**Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
+```

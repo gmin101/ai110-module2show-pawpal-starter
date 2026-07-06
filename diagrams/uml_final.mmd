@@ -1,0 +1,69 @@
+classDiagram
+    %% PawPal+ class design (matches the final implementation in pawpal_system.py)
+    %% Owner owns Pets; each Pet owns its Tasks; the Scheduler is bound to one
+    %% Owner and pulls tasks across ALL of that owner's pets to build a plan.
+
+    class Owner {
+        +str name
+        +int available_minutes
+        +list~str~ preferences
+        +list~Pet~ pets
+        +add_pet(pet) None
+        +remove_pet(pet_name) None
+        +list_pets() list~Pet~
+        +set_availability(minutes) None
+        +set_preferences(prefs) None
+    }
+
+    class Pet {
+        +str name
+        +str species
+        +str breed
+        +int age
+        +list~Task~ tasks
+        +add_task(task) None
+        +complete_task(task_id) Task
+        +edit_task(task_id, changes) None
+        +delete_task(task_id) None
+        +list_tasks() list~Task~
+    }
+
+    class Task {
+        +str id
+        +str description
+        +time time
+        +str frequency
+        +bool completed
+        +int duration_minutes
+        +int priority
+        +date due_date
+        +str pet_name
+        +mark_complete() None
+        +end_time() time
+        +overlaps(other) bool
+        +next_occurrence(after) Task
+        +edit(changes) None
+    }
+
+    class Scheduler {
+        +Owner owner
+        +list~Task~ skipped
+        +dict~str,float~ scores
+        +float PREFERENCE_BONUS$
+        +collect_tasks() list~Task~
+        +pending_tasks() list~Task~
+        +filter_tasks(pet_name, completed) list~Task~
+        +sort_by_time(tasks) list~Task~$
+        +find_conflicts(tasks) list~tuple~
+        +conflict_warnings(tasks) list~str~
+        +score_task(task) float
+        +generate_plan() list~Task~
+        +explain(plan) str
+    }
+
+    Owner "1" --> "*" Pet : owns
+    Pet "1" --> "*" Task : has
+    Scheduler "1" --> "1" Owner : plans for
+    Scheduler ..> Task : orders & selects
+    Pet ..> Task : queues follow-up
+    Task ..> Task : next_occurrence()
